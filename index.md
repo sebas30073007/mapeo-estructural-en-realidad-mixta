@@ -8,6 +8,8 @@ nav_order: 0
 
 Sistema de teleoperación robótica para exploración, mapeo estructural y visualización de entornos físicos en realidad mixta.
 
+![Robot omnidireccional]({{ "/assets/img/robot/Rosbot.png" | relative_url }})
+
 El proyecto integra un robot omnidireccional equipado con LiDAR, cámara de profundidad, ROS y una aplicación desarrollada en Unity para Meta Quest. A partir de mapas generados mediante SLAM, el sistema procesa la información del entorno, detecta estructuras principales y reconstruye paredes dentro de un mundo digital visible desde realidad mixta.
 
 ## Capacidades principales
