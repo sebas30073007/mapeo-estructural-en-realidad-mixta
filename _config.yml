@@ -1,8 +1,15 @@
-title: Just the Docs Template
-description: A starter template for a Jeykll site using the Just the Docs theme!
+title: Mapeo Estructural en Realidad Mixta
+description: Sistema de teleoperación robótica con mapeo estructural y visualización en realidad mixta.
 theme: just-the-docs
 
-url: https://just-the-docs.github.io
+url: https://sebas30073007.github.io/mapeo-estructural-en-realidad-mixta
 
 aux_links:
-  Template Repository: https://github.com/just-the-docs/just-the-docs-template
+  GitHub: https://github.com/sebas30073007/mapeo-estructural-en-realidad-mixta
+
+callouts_level: quiet
+callouts:
+  note:
+    color: blue
+  warning:
+    color: yellow
