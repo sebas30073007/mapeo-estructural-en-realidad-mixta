@@ -5,7 +5,11 @@
       "Bash(Select-Object FullName)",
       "Bash(Sort-Object FullName)",
       "PowerShell(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\mapeo-estructural-en-realidad-mixta\\\\mapeo-estructural-en-realidad-mixta\" -Depth 3 | Where-Object {$_.PSIsContainer} | Select-Object FullName)",
-      "PowerShell(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\mapeo-estructural-en-realidad-mixta\\\\mapeo-estructural-en-realidad-mixta\" -Recurse -Force | ForEach-Object { $_.FullName } | Sort-Object)"
+      "PowerShell(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\mapeo-estructural-en-realidad-mixta\\\\mapeo-estructural-en-realidad-mixta\" -Recurse -Force | ForEach-Object { $_.FullName } | Sort-Object)",
+      "Bash(Get-ChildItem -Path \"E:\\\\20_UNI\\\\Html proyects\\\\mapeo-estructural-en-realidad-mixta\\\\mapeo-estructural-en-realidad-mixta\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Select-Object -First 100)",
+      "Bash(Format-Table Name, FullName, PSIsContainer)"
     ]
   }
 }

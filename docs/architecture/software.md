@@ -13,22 +13,23 @@ El sistema se apoya en dos stacks de software independientes que se comunican en
 
 | Capa | Tecnología |
 |---|---|
-| Sistema operativo | Ubuntu 20.04 LTS (Focal Fossa) |
-| Middleware robótico | ROS Noetic Ninjemys |
+| Sistema operativo | Ubuntu 24.04 LTS (Noble) |
+| Middleware robótico | ROS 2 Jazzy Jalisco |
 | Mapeo y localización | SLAM Toolbox |
 | Driver LiDAR | `rplidar_ros` |
 | Driver cámara de profundidad | `astra_camera` (Orbbec ROS SDK / OpenNI2) |
-| Comunicación hacia lentes | Servidor UDP personalizado (Python / C++) |
+| Comunicación hacia lentes | `slam_server.py` (Flask HTTP :5008) + nodo ROS 2 UDP |
 | Control de motores | Stack de tracción del ROSbot 2R (Husarion) |
 
-### ROS Noetic
+### ROS 2 Jazzy
 
-ROS (Robot Operating System) es el middleware estándar en robótica. Proporciona un sistema de publicación/suscripción de mensajes entre nodos, herramientas de visualización (RViz), abstracción de drivers de sensores y un ecosistema de paquetes listos para usar. En este proyecto los nodos principales son:
+ROS 2 (Robot Operating System 2) es el middleware estándar en robótica. Proporciona un sistema de publicación/suscripción de mensajes entre nodos, herramientas de visualización (RViz2), abstracción de drivers de sensores y un ecosistema de paquetes listos para usar. En este proyecto los nodos principales son:
 
 - **`rplidar_ros`** — publica escaneos en `/scan`.
 - **`astra_camera`** — publica frames de video y datos de profundidad de la Orbbec Astra Pro.
 - **`slam_toolbox`** — suscribe a `/scan` y publica el mapa ocupacional en `/map`.
-- **Nodo de comunicación UDP** — serializa y envía datos a los lentes, y recibe comandos de movimiento.
+- **`wifi_sampler`** — nodo ROS 2 que mide RSSI por posición usando TF2 y envía muestras por UDP al puerto 5007.
+- **`slam_server`** — servidor HTTP Flask en el puerto 5008 que genera el mapa bajo demanda y lo sirve a los lentes.
 
 ### SLAM Toolbox
 

@@ -17,11 +17,11 @@ El diseño original contemplaba tres nodos: el robot, un servidor intermedio de 
 ┌─────────────────────────────────┐         Tailscale VPN        ┌──────────────────────────────┐
 │           ROBOT                 │  ◄──────────────────────────► │       META QUEST             │
 │                                 │                               │                              │
-│  LiDAR ──► ROS / SLAM Toolbox   │  ──► Video   (UDP :5000)      │  Aplicación Unity            │
-│  Cámara ──► Streaming de video  │  ──► LiDAR   (UDP :5002)      │  Meta XR All-in-One SDK      │
-│  WiFi ───► Medición de señal    │  ──► Datos   (UDP :5005)      │                              │
-│                                 │  ◄── Cmd mov (UDP :5007)      │  Joystick virtual            │
-│  Raspberry Pi 4 (Ubuntu + ROS)  │                               │  Reconstrucción 3D           │
+│  LiDAR ──► ROS 2 / SLAM Toolbox │  ──► Video   (ZMQ :5555)      │  Aplicación Unity            │
+│  Cámara ──► Streaming de video  │  ──► WiFi    (UDP :5007)      │  Meta XR All-in-One SDK      │
+│  WiFi ───► Medición de señal    │  ──► Mapa    (HTTP :5008)     │                              │
+│                                 │  ◄── Cmd mov (UDP :5002)      │  Joystick virtual            │
+│  Ubuntu 24.04 + ROS 2 Jazzy     │                               │  Reconstrucción 3D           │
 └─────────────────────────────────┘                               │  Mapa de calor WiFi          │
                                                                   └──────────────────────────────┘
 ```

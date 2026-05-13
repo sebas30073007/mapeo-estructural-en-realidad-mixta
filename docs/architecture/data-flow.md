@@ -7,91 +7,87 @@ nav_order: 4
 
 # Flujo de Datos
 
-Toda la comunicación entre el robot y los lentes Meta Quest se realiza mediante **UDP sobre la red virtual de Tailscale**. Se definen cuatro canales independientes, cada uno en un puerto distinto, según la naturaleza y la dirección del dato.
+Toda la comunicación entre el robot y los lentes Meta Quest se realiza sobre la red virtual de **Tailscale**. La implementación final utiliza cuatro canales distintos con protocolos elegidos según la naturaleza del dato.
 
-## Mapa de puertos
+## Mapa de canales
 
-| Puerto | Dirección | Contenido | Frecuencia |
-|---|---|---|---|
-| **5000** | Robot → Meta Quest | Stream de video (cámara) | Continuo (~30 fps) |
-| **5002** | Robot → Meta Quest | Datos del LiDAR (escaneo 360°) | Continuo (~10 Hz) |
-| **5005** | Robot → Meta Quest | Datos genéricos / mapa SLAM | Bajo demanda |
-| **5007** | Meta Quest → Robot | Comandos de movimiento | Continuo mientras hay entrada |
+| Puerto | Protocolo | Dirección | Contenido | Frecuencia |
+|---|---|---|---|---|
+| **5002** | UDP | Meta Quest → Robot | Comandos de movimiento (vx, vy, wz) | Continuo mientras hay entrada |
+| **5007** | UDP | Robot → Meta Quest | Muestras de señal WiFi (RSSI + posición) | Cada 1 m recorrido |
+| **5008** | HTTP | Meta Quest → Robot | Solicitud de mapa SLAM (`/generate_map`) | Bajo demanda |
+| **5555** | ZMQ | Robot → Meta Quest | Stream de video (frames JPEG) | Continuo (~30 fps) |
 
-## Por qué UDP
+## Elección de protocolos
 
-El protocolo UDP se eligió frente a TCP por dos razones principales:
+**UDP** para teleop y WiFi: la latencia mínima es prioritaria. Un paquete perdido simplemente se descarta; el siguiente refleja el estado actual del joystick o de la señal.
 
-- **Latencia mínima** — el video y los datos del LiDAR deben llegar con la menor demora posible. Con TCP, las retransmisiones de paquetes perdidos introducirían jitter perceptible; con UDP, un paquete perdido simplemente se descarta y se usa el siguiente.
-- **Tolerancia a pérdidas** — tanto el video como el LiDAR son streams donde un frame perdido tiene impacto visual mínimo frente al coste de retrasar todos los frames posteriores.
+**HTTP** para el mapa SLAM: la transferencia de mapa es una operación de petición–respuesta con payload grande (PGM en base64 + JSON de paredes). HTTP sobre TCP garantiza la entrega completa sin implementar confirmación manual.
 
-Para los datos de SLAM (puerto 5005), aunque la transmisión es bajo demanda, se mantiene UDP por consistencia de la arquitectura. A nivel de aplicación se implementa confirmación de recepción cuando es necesario.
-
----
-
-## Puerto 5000 — Stream de video
-
-El nodo de la cámara RealSense D435 captura frames y los comprime antes de enviarlos:
-
-- **Resolución de transmisión:** 720 × 680 píxeles.
-- **Compresión:** JPEG al 50% de calidad, lo que reduce significativamente el tamaño del frame manteniendo una calidad visual aceptable para teleoperación.
-- **Frecuencia objetivo:** ~30 fps, condicionada al ancho de banda disponible en la VPN.
-
-En el lado de los lentes, la aplicación Unity recibe cada datagrama, decodifica el JPEG y actualiza la textura del panel de video en tiempo real.
-
-## Puerto 5002 — Datos del LiDAR
-
-El nodo `rplidar_ros` publica los escaneos en el tópico ROS `/scan`. Un nodo puente serializa esos datos y los retransmite por UDP hacia los lentes:
-
-- **Formato:** array de distancias (float32) correspondientes a las 360° del escaneo, acompañado de metadatos de ángulo mínimo, máximo e incremento.
-- **Frecuencia:** ~10 Hz (sincronizado con el ciclo de escaneo del RPLIDAR A2M8).
-
-Estos datos se usan en la aplicación Unity para representar en tiempo real la nube de puntos 2D del entorno inmediato del robot, como retroalimentación visual al operador.
-
-## Puerto 5005 — Datos genéricos / SLAM bajo demanda
-
-Este canal transporta datos que no requieren transmisión continua. El caso de uso principal es el mapa SLAM:
-
-1. El operador pulsa **Calculate Map** en la aplicación de los lentes.
-2. Los lentes envían una solicitud al robot (puede hacerse por el mismo canal o por el puerto de comandos).
-3. El nodo de comunicación del robot consulta el mapa actual de SLAM Toolbox (`/map`).
-4. Se aplican filtros para eliminar ruido y extraer las estructuras de mayor relevancia (paredes, esquinas, límites del espacio).
-5. Los puntos resultantes se serializan y envían por el puerto 5005.
-6. La aplicación Unity recibe el payload, deserializa los puntos e instancia los objetos 3D que representan las paredes en el mundo digital.
-
-Este canal puede usarse en el futuro para transmitir otros datos no periódicos, como datos de intensidad WiFi acumulados, comandos de configuración, etc.
-
-## Puerto 5007 — Comandos de movimiento
-
-Este es el único canal en dirección Meta Quest → Robot. El operador usa el joystick virtual de la aplicación para generar comandos de velocidad:
-
-- **Velocidad lineal (`linear.x`)** — desplazamiento adelante/atrás, en m/s.
-- **Velocidad angular (`angular.z`)** — rotación sobre el eje vertical, en rad/s.
-
-El mensaje sigue la estructura estándar `geometry_msgs/Twist` de ROS, serializado en formato compacto para su envío por UDP. En el robot, el nodo receptor convierte el datagrama en un mensaje ROS y lo publica en `/cmd_vel`, que es consumido por el stack de control de motores del ROSbot 2R.
-
-La frecuencia de envío se adapta a la entrada del operador: se envía un nuevo datagrama cada vez que cambia el valor del joystick, con un mínimo de un mensaje de "parada" si el operador suelta el control.
+**ZMQ** para video: ZeroMQ desacopla el productor del consumidor mediante un patrón publish/subscribe, lo que facilita el manejo de backpressure cuando los frames llegan más rápido de lo que Unity los procesa.
 
 ---
 
-## Diagrama de flujo completo
+## Puerto 5002 — Comandos de movimiento
 
+El script `UdpTeleopSender` en Unity captura la entrada del joystick del operador y envía un comando JSON por UDP al robot cada ~100 ms:
+
+```json
+{ "vx": 0.1200, "vy": 0.0000, "wz": -0.3000 }
 ```
-META QUEST                              ROBOT (Raspberry Pi 4)
-──────────────────────────────────────────────────────────────────
-                    Tailscale VPN
 
-                ◄── UDP :5000 ──────── Cámara RealSense D435
-                                       (720×680 px, JPEG 50%)
+- **`vx`** — velocidad lineal adelante/atrás en m/s (máximo ±0.15 m/s).
+- **`vy`** — velocidad lateral en m/s, disponible gracias a la tracción omnidireccional del ROSbot.
+- **`wz`** — velocidad angular sobre el eje vertical en rad/s (máximo ±0.5 rad/s).
 
-                ◄── UDP :5002 ──────── LiDAR RPLIDAR A2M8
-                                       (escaneo 360°, ~10 Hz)
+El robot recibe el datagrama, parsea el JSON y publica en `/cmd_vel` como `geometry_msgs/Twist`. Si no llega ningún comando durante varios ciclos, el robot se detiene por seguridad.
 
-[Calculate Map] ──► solicitud ────────►
-                ◄── UDP :5005 ──────── SLAM Toolbox → filtros
-                                       (mapa de paredes bajo demanda)
+## Puerto 5007 — Muestras de señal WiFi
 
-[Joystick]      ──► UDP :5007 ────────► /cmd_vel → motores
-                    (linear.x,          (velocidad lineal + angular)
-                     angular.z)
+El nodo ROS 2 `wifi_sampler` corre en el robot, escucha `/odom` como trigger y envía una muestra al puerto 5007 de Unity cada vez que el robot avanza 1 m (configurable):
+
+```json
+{
+  "type": "sample",
+  "t": 1718200345.892,
+  "ssid": "MiRed_5G",
+  "bssid": "aa:bb:cc:dd:ee:ff",
+  "rssi": -62,
+  "x": 2.4310,
+  "y": -1.1050,
+  "k": 14,
+  "map_origin_x": -3.5,
+  "map_origin_y": -2.1
+}
 ```
+
+Las coordenadas `x`, `y` corresponden al frame `map` de ROS 2, obtenidas mediante lookup TF2 `map → base_link`. Unity usa `map_origin_x/y` para alinear la muestra con el mapa descargado.
+
+## Puerto 5008 — Solicitud de mapa SLAM
+
+El servidor `slam_server.py` corre en el robot como proceso Flask. Unity hace una petición HTTP GET cuando el operador pulsa el botón de actualizar mapa:
+
+**`GET http://<robot_ip>:5008/health`** — verifica disponibilidad antes de pedir el mapa.
+
+**`GET http://<robot_ip>:5008/generate_map`** — desencadena la secuencia completa de generación:
+
+1. Ejecuta `ros2 run nav2_map_server map_saver_cli` → guarda `current_map.pgm` + `current_map.yaml`.
+2. Ejecuta `extract_walls.py` sobre esos archivos → genera `walls.json` con segmentos de pared y esquinas.
+3. Devuelve un único JSON con los tres archivos empaquetados.
+
+```json
+{
+  "status": "success",
+  "pgm": "<base64...>",
+  "yaml": "image: current_map.pgm\nresolution: 0.05\n...",
+  "walls": "{\"version\":3,\"wall_segments\":[...],\"personas\":[...]}",
+  "pgm_size": 153600,
+  "yaml_size": 142,
+  "walls_size": 8740
+}
+```
+
+## Puerto 5555 — Stream de video (ZMQ)
+
+El script `RosbotVideoStreamReceiver` en Unity se suscribe al topic ZMQ `"video_rgb"` en el puerto 5555 del robot. La recepción ocurre en un hilo separado que deposita los frames en una `ConcurrentQueue<byte[]>`; el hilo principal de Unity decodifica el JPEG y actualiza la textura en cada `Update()`.
+

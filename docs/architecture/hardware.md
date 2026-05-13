@@ -14,8 +14,8 @@ El robot utilizado es un **Husarion ROSbot 2R**, una plataforma robótica comerc
 | Componente | Detalle |
 |---|---|
 | **Unidad de cómputo** | Raspberry Pi 4 Model B — ARM Cortex-A72 (64-bit), hasta 1.8 GHz, 2 GB RAM |
-| **Sistema operativo** | Ubuntu 20.04 LTS (Focal Fossa) |
-| **Middleware robótico** | ROS Noetic Ninjemys |
+| **Sistema operativo** | Ubuntu 24.04 LTS (Noble) |
+| **Middleware robótico** | ROS 2 Jazzy Jalisco |
 | **LiDAR** | RPLIDAR A2M8 — escaneo 360°, rango hasta 12 m, 8 000 muestras/s |
 | **Cámara de profundidad** | Orbbec Astra Pro — RGB + profundidad, rango 0.4–8 m, profundidad 640×480 @ 30 fps |
 | **Tracción** | 4 ruedas con motores DC — configuración omnidireccional (mecanum-like) |

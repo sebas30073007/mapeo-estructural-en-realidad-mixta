@@ -28,18 +28,18 @@ El SDK unificado de Meta concentra en un solo paquete de Unity todos los módulo
 - **Interaction SDK** — sistema de interacción 3D (botones virtuales, joystick, raycast).
 - **Passthrough API** — acceso a la cámara del visor para superponer el mundo digital sobre el entorno real.
 
-## Comunicación UDP
+## Comunicación con el robot
 
-Todos los scripts de red están implementados en C# utilizando la clase `System.Net.Sockets.UdpClient` de .NET. No se usa ninguna librería de red de terceros. Cada canal de comunicación se gestiona en un hilo de fondo independiente para no bloquear el hilo principal de Unity (render loop).
+Los scripts de red están implementados en C# usando `System.Net.Sockets.UdpClient` de .NET para los canales UDP, `UnityWebRequest` para HTTP y **NetMQ** (ZeroMQ para .NET) para la recepción de video. Cada canal de recepción corre en un hilo de fondo independiente para no bloquear el render loop de Unity.
 
 Los cuatro canales activos son:
 
-| Puerto | Rol en la app |
-|---|---|
-| 5000 | Recepción de video — decodifica JPEG y actualiza textura del panel |
-| 5002 | Recepción de datos LiDAR — parsea distancias y actualiza visualización |
-| 5005 | Recepción de datos SLAM — genera geometría 3D de paredes bajo demanda |
-| 5007 | Envío de comandos de movimiento — publica velocidad lineal y angular |
+| Puerto | Protocolo | Rol en la app |
+|---|---|---|
+| 5002 | UDP out | Envío de comandos de movimiento — velocidad lineal y angular al robot |
+| 5007 | UDP in | Recepción de muestras WiFi — posición + RSSI para el mapa de calor |
+| 5008 | HTTP | Solicitud del mapa SLAM bajo demanda — descarga PGM + JSON de paredes |
+| 5555 | ZMQ in | Recepción del stream de video — frames JPEG desde la cámara Astra |
 
 ## Compilación y despliegue
 
